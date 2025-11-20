@@ -232,6 +232,101 @@
             background-color: #0f3d24;
             background-image: radial-gradient(circle at center, #1a5c38 0%, #0f3d24 100%);
         }
+
+        /* 3D Bowl Styles */
+        .bowl-container-3d {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            perspective: 1000px;
+        }
+
+        /* Wrapper for Shaking Base + Cover together */
+        .bowl-shaker {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+
+        .bowl-base {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 260px;
+            height: 130px;
+            /* Half height for perspective base */
+            background: radial-gradient(circle at 50% 50%, #2d3748, #1a202c);
+            border-radius: 0 0 130px 130px;
+            /* Bottom hemisphere */
+            box-shadow:
+                0 10px 20px rgba(0, 0, 0, 0.6),
+                inset 0 5px 15px rgba(255, 255, 255, 0.1);
+            border: 4px solid #4a5568;
+            border-top: none;
+            display: flex;
+            align-items: flex-start;
+            /* Align dice to top of base */
+            justify-content: center;
+            z-index: 10;
+            padding-top: 20px;
+        }
+
+        .bowl-cover {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 260px;
+            height: 130px;
+            /* Half height for top dome */
+            background: radial-gradient(circle at 30% 30%, #4a5568, #1a202c);
+            border-radius: 130px 130px 0 0;
+            /* Top hemisphere (Dome) */
+            box-shadow:
+                0 5px 15px rgba(0, 0, 0, 0.5),
+                inset 2px 2px 20px rgba(255, 255, 255, 0.3),
+                inset -5px -5px 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid #718096;
+            border-bottom: 4px solid #2d3748;
+            /* Seam */
+            z-index: 20;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-origin: bottom center;
+        }
+
+        .bowl-cover::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            /* Handle on top */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 40px;
+            border-radius: 10px 10px 0 0;
+            background: linear-gradient(to bottom, #fbbf24, #b45309);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            border: 2px solid #fcd34d;
+        }
+
+        .cover-lifted {
+            transform: translateX(-50%) translateY(-180px) rotateX(10deg);
+            opacity: 0.9;
+        }
+
+        /* Dice positioning on base */
+        .dice-group {
+            display: flex;
+            gap: 12px;
+            z-index: 15;
+            margin-top: -40px;
+            /* Pull dice up to sit on the "floor" of the base */
+        }
     </style>
 </head>
 
@@ -266,7 +361,7 @@
             }
 
             return (
-                <div className={`dice-face d-${value} w-16 h-16 md:w-20 md:h-20 bg-white rounded-xl shadow-lg`}>
+                <div className={`dice-face d-${value} w-12 h-12 md:w-14 md:h-14 bg-white rounded-xl shadow-lg transform transition-transform hover:scale-105`}>
                     {dots}
                 </div>
             );
@@ -275,11 +370,11 @@
         // 2. Toast Component
         const Toast = ({ message, type }) => {
             if (!message) return null;
-            const bgColor = type === 'error' ? 'bg-red-600' : 'bg-yellow-500';
-            const textColor = type === 'error' ? 'text-white' : 'text-black';
+            const bgColor = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-yellow-500');
+            const textColor = 'text-white';
 
             return (
-                <div className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 px-8 py-4 rounded-lg shadow-2xl ${bgColor} ${textColor} text-xl font-bold animate-bounce border-2 border-white`}>
+                <div className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] px-8 py-4 rounded-lg shadow-2xl ${bgColor} ${textColor} text-xl font-bold animate-bounce border-2 border-white text-center whitespace-nowrap`}>
                     {message}
                 </div>
             );
@@ -290,13 +385,67 @@
             if (!text) return null;
             const colorClass = type === 'win' ? 'text-yellow-400' : 'text-red-500';
             return (
-                <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-40 text-4xl md:text-6xl font-black ${colorClass} drop-shadow-lg animate-float-up pointer-events-none`}>
+                <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[60] text-5xl md:text-7xl font-black ${colorClass} drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] animate-float-up pointer-events-none whitespace-nowrap`}>
                     {text}
                 </div>
             );
         };
 
-        // 4. Main App Component
+        // 4. History Modal Component
+        const HistoryModal = ({ isOpen, onClose, history }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-pop-in">
+                    <div className="bg-gray-900 border-2 border-yellow-500 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center p-4 border-b border-gray-700 bg-gray-800">
+                            <h2 className="text-2xl font-bold text-yellow-400">歷史紀錄 (History)</h2>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-white transition-colors text-2xl font-bold px-2"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Body - Scrollable Table */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {history.length === 0 ? (
+                                <div className="text-center text-gray-500 py-8">暫無紀錄 (No History Yet)</div>
+                            ) : (
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="text-gray-400 border-b border-gray-700">
+                                            <th className="p-2">Time</th>
+                                            <th className="p-2">Round</th>
+                                            <th className="p-2">Result</th>
+                                            <th className="p-2 text-right">Balance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {history.slice().reverse().map((entry, idx) => (
+                                            <tr key={idx} className="border-b border-gray-800 hover:bg-white/5 transition-colors">
+                                                <td className="p-3 text-gray-300 font-mono text-sm">{entry.time}</td>
+                                                <td className="p-3 text-yellow-500 font-bold">#{entry.round}</td>
+                                                <td className="p-3">
+                                                    <span className={`font-bold ${entry.netChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {entry.resultText} ({entry.netChange >= 0 ? '+' : ''}{entry.netChange})
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 text-right font-mono text-white">${entry.balance.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 5. Main App Component
         const App = () => {
             // State
             const [gameState, setGameState] = useState(PHASES.SHUFFLING);
@@ -307,6 +456,11 @@
             const [timer, setTimer] = useState(BET_TIME);
             const [toast, setToast] = useState({ msg: '', type: '' });
             const [resultData, setResultData] = useState(null); // { text: "BIG", winAmount: 200 }
+
+            // New State for History & Round
+            const [round, setRound] = useState(1);
+            const [history, setHistory] = useState([]);
+            const [showHistory, setShowHistory] = useState(false);
 
             // Refs
             const timerRef = useRef(null);
@@ -357,7 +511,7 @@
                     let resultType = ""; // 'big', 'small', 'leopard'
 
                     if (isLeopard) {
-                        resultText = "豹子 (LEOPARD)";
+                        resultText = "豹子";
                         resultType = 'leopard';
                         // House wins all Big/Small bets
                     } else {
@@ -365,38 +519,49 @@
                         const isBig = sum >= 11 && sum <= 17;
 
                         if (isSmall) {
-                            resultText = "小 (SMALL)";
+                            resultText = "小";
                             resultType = 'small';
                             if (currentBets.small > 0) payout += currentBets.small * 2;
                         } else {
-                            resultText = "大 (BIG)";
+                            resultText = "大";
                             resultType = 'big';
                             if (currentBets.big > 0) payout += currentBets.big * 2;
                         }
                     }
 
-                    // Net Change Calculation
-                    // If I bet 100 and lose: Balance -100 (already deducted). Net change for round display: -100.
-                    // If I bet 100 and win: Balance +200. Net change for round display: +100.
-                    // However, user requested: "Win: +$200", "Lose: -$100".
-                    // This implies showing the Payout vs Loss.
-                    // Let's calculate Net Profit/Loss for the display.
-
                     const netChange = payout - totalBet;
 
-                    // Update Balance
+                    // Calculate final balance for history (using the balance from closure, which is post-bet)
+                    const finalBalance = balance + payout;
+
+                    // Update Balance State ONLY if there is a payout
                     if (payout > 0) {
-                        setBalance(b => b + payout);
+                        setBalance(prev => prev + payout);
                     }
 
-                    // Set Result Data for Display
-                    setResultData({
-                        text: resultText,
-                        sum: sum,
-                        type: resultType,
+                    // Log History
+                    const now = new Date();
+                    const timeString = now.toTimeString().split(' ')[0];
+                    const newHistoryEntry = {
+                        time: timeString,
+                        round: round,
+                        resultText: resultText,
                         netChange: netChange,
-                        payout: payout
-                    });
+                        balance: finalBalance
+                    };
+
+                    setHistory(prev => [...prev, newHistoryEntry]);
+
+                    // Delay result data slightly to sync with animation lift
+                    setTimeout(() => {
+                        setResultData({
+                            text: resultText === "豹子" ? "豹子 (LEOPARD)" : (resultText === "小" ? "小 (SMALL)" : "大 (BIG)"),
+                            sum: sum,
+                            type: resultType,
+                            netChange: netChange,
+                            payout: payout
+                        });
+                    }, 500);
 
                     // Wait 5 seconds then Reset
                     const timeout = setTimeout(() => {
@@ -405,13 +570,15 @@
 
                     return () => clearTimeout(timeout);
                 }
-            }, [gameState]);
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [gameState, dice, currentBets, round]); // REMOVED 'balance' to prevent infinite loop
 
             // Phase 4: Reset
             useEffect(() => {
                 if (gameState === PHASES.RESET) {
                     setCurrentBets({ big: 0, small: 0 });
                     setToast({ msg: '', type: '' });
+                    setRound(r => r + 1); // Increment Round
                     setGameState(PHASES.SHUFFLING);
                 }
             }, [gameState]);
@@ -421,7 +588,7 @@
 
             const showToast = (msg, type = 'error') => {
                 setToast({ msg, type });
-                if (type === 'error') {
+                if (type === 'error' || type === 'info') {
                     setTimeout(() => setToast({ msg: '', type: '' }), 2000);
                 }
             };
@@ -455,40 +622,52 @@
 
             const handleConfirm = () => {
                 if (gameState === PHASES.BETTING) {
-                    setTimer(0);
+                    setTimer(0); // Immediately triggers REVEAL via useEffect
                 }
+            };
+
+            const handleCancel = () => {
+                if (gameState !== PHASES.BETTING) return;
+
+                const totalBet = currentBets.big + currentBets.small;
+                if (totalBet === 0) return;
+
+                setBalance(b => b + totalBet);
+                setCurrentBets({ big: 0, small: 0 });
+                showToast("已取消下注 (Bets Cleared)", "info");
             };
 
             // --- Render Helpers ---
 
             const getBowlContent = () => {
-                if (gameState === PHASES.SHUFFLING) {
-                    return (
-                        <div className="w-64 h-64 bg-gray-800 rounded-full flex items-center justify-center border-8 border-yellow-600 shadow-2xl animate-shake relative z-10">
-                            <span className="text-8xl">🎲</span>
-                        </div>
-                    );
-                }
-                if (gameState === PHASES.BETTING) {
-                    return (
-                        <div className="w-64 h-64 bg-gray-800 rounded-full flex items-center justify-center border-8 border-yellow-600 shadow-2xl relative z-10">
-                            <div className="text-center animate-pulse">
-                                <div className="text-4xl mb-2">⏳</div>
-                                <div className="text-2xl text-yellow-500 font-bold">請下注</div>
-                                <div className="text-sm text-yellow-300">Place Bets</div>
+                const isShaking = gameState === PHASES.SHUFFLING;
+                const isRevealed = gameState === PHASES.REVEAL || gameState === PHASES.RESET;
+
+                // Wrapper class for shaking the WHOLE bowl (Base + Cover)
+                const shakerClass = isShaking ? 'animate-shake' : '';
+
+                return (
+                    <div className="bowl-container-3d">
+                        {/* Shaker Wrapper: Moves Base and Cover together */}
+                        <div className={`bowl-shaker ${shakerClass}`}>
+
+                            {/* Base with Dice */}
+                            <div className="bowl-base">
+                                <div className="dice-group">
+                                    {dice.map((d, i) => <Dice key={i} value={d} />)}
+                                </div>
+                            </div>
+
+                            {/* Cover - Only lifts in REVEAL/RESET phase */}
+                            <div className={`bowl-cover ${isRevealed ? 'cover-lifted' : ''}`}>
+                                {/* Handle is pseudo-element */}
                             </div>
                         </div>
-                    );
-                }
-                // Reveal & Reset
-                return (
-                    <div className="w-64 h-64 bg-gray-800/95 rounded-full flex flex-col items-center justify-center border-8 border-yellow-600 shadow-2xl relative z-10">
-                        <div className="flex gap-4 mb-4">
-                            {dice.map((d, i) => <Dice key={i} value={d} />)}
-                        </div>
-                        {resultData && (
-                            <div className="text-center animate-pop-in">
-                                <div className="text-3xl font-black text-white drop-shadow-md">
+
+                        {/* Result Text Overlay (Floating above bowl) */}
+                        {isRevealed && resultData && (
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-pop-in pointer-events-none">
+                                <div className="text-5xl font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] bg-black/60 px-6 py-3 rounded-2xl backdrop-blur-sm border border-white/20">
                                     {resultData.sum} 點
                                 </div>
                             </div>
@@ -500,6 +679,7 @@
             return (
                 <div className="flex flex-col h-full w-full select-none relative overflow-hidden">
                     <Toast message={toast.msg} type={toast.type} />
+                    <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} history={history} />
 
                     {/* Floating Win/Loss Text */}
                     {gameState === PHASES.REVEAL && resultData && resultData.netChange !== 0 && (
@@ -511,18 +691,35 @@
 
                     {/* Header */}
                     <header className="flex-none flex justify-between items-center p-4 bg-black/40 backdrop-blur-md border-b border-white/10 z-50">
-                        <h1 className="text-xl md:text-2xl font-bold text-yellow-400 tracking-wider">SIC BO (骰寶)</h1>
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-300 text-sm md:text-base">餘額 (Balance):</span>
-                            <span className="text-xl md:text-2xl font-mono text-yellow-400 font-bold">${balance.toLocaleString()}</span>
+                        <div className="flex flex-col">
+                            <h1 className="text-xl md:text-2xl font-bold text-yellow-400 tracking-wider">SIC BO (骰寶)</h1>
+                            <span className="text-xs md:text-sm text-gray-400 font-mono">Round #{round} (第 {round} 局)</span>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="flex flex-col items-end">
+                                <span className="text-gray-300 text-xs">餘額 (Balance)</span>
+                                <span className="text-xl md:text-2xl font-mono text-yellow-400 font-bold">${balance.toLocaleString()}</span>
+                            </div>
+
+                            <button
+                                onClick={() => setShowHistory(true)}
+                                className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-full border border-gray-600 transition-colors"
+                                title="History"
+                            >
+                                {/* Clock Icon SVG */}
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
                         </div>
                     </header>
 
-                    {/* Game Area - Flex Grow to take available space */}
-                    <main className="flex-1 flex flex-col items-center justify-center relative w-full overflow-y-auto p-4">
+                    {/* Game Area */}
+                    <main className="flex-1 flex flex-col items-center justify-center relative w-full overflow-y-auto p-2">
 
                         {/* Status / Result Banner */}
-                        <div className="absolute top-4 z-0 text-center w-full flex items-center justify-center pointer-events-none">
+                        <div className="absolute top-2 z-0 text-center w-full flex items-center justify-center pointer-events-none">
                             {gameState === PHASES.REVEAL && resultData ? (
                                 <h2 className={`text-5xl md:text-6xl font-black drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] animate-pop-in
                                     ${resultData.type === 'big' ? 'text-red-500' : ''}
@@ -541,7 +738,7 @@
                         </div>
 
                         {/* Bowl */}
-                        <div className="mt-12 mb-8 transform scale-90 md:scale-100 transition-transform z-10">
+                        <div className="mt-8 mb-4 transform scale-90 md:scale-100 transition-transform z-10">
                             {getBowlContent()}
                         </div>
 
@@ -552,7 +749,7 @@
                                 onClick={() => handleBet('small')}
                                 disabled={gameState !== PHASES.BETTING || currentBets.big > 0}
                                 className={`
-                                    relative h-40 md:h-56 rounded-2xl border-4 flex flex-col items-center justify-center transition-all duration-200 group
+                                    relative h-36 md:h-48 rounded-2xl border-4 flex flex-col items-center justify-center transition-all duration-200 group
                                     ${gameState === PHASES.BETTING ? 'hover:bg-white/5 cursor-pointer active:scale-95' : 'cursor-default opacity-80'}
                                     ${currentBets.big > 0 ? 'opacity-30 grayscale' : ''}
                                     ${gameState === PHASES.REVEAL && resultData?.type === 'small' ? 'bg-blue-500/30 border-blue-400 shadow-[0_0_50px_rgba(59,130,246,0.6)] scale-105 z-20' : 'bg-blue-900/40 border-blue-500/50'}
@@ -572,7 +769,7 @@
                                 onClick={() => handleBet('big')}
                                 disabled={gameState !== PHASES.BETTING || currentBets.small > 0}
                                 className={`
-                                    relative h-40 md:h-56 rounded-2xl border-4 flex flex-col items-center justify-center transition-all duration-200 group
+                                    relative h-36 md:h-48 rounded-2xl border-4 flex flex-col items-center justify-center transition-all duration-200 group
                                     ${gameState === PHASES.BETTING ? 'hover:bg-white/5 cursor-pointer active:scale-95' : 'cursor-default opacity-80'}
                                     ${currentBets.small > 0 ? 'opacity-30 grayscale' : ''}
                                     ${gameState === PHASES.REVEAL && resultData?.type === 'big' ? 'bg-red-500/30 border-red-400 shadow-[0_0_50px_rgba(239,68,68,0.6)] scale-105 z-20' : 'bg-red-900/40 border-red-500/50'}
@@ -589,18 +786,18 @@
                         </div>
                     </main>
 
-                    {/* Control Panel - Fixed at bottom or Flex-none */}
+                    {/* Control Panel */}
                     <footer className="flex-none bg-black/80 p-4 backdrop-blur-xl border-t border-white/10 w-full z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
 
-                            {/* Chips - No scrolling, flex wrap if needed but prefer single line */}
+                            {/* Chips */}
                             <div className="flex items-center justify-center gap-3 md:gap-6">
                                 {CHIPS.map(val => (
                                     <button
                                         key={val}
                                         onClick={() => setSelectedChip(val)}
                                         className={`
-                                            relative w-14 h-14 md:w-16 md:h-16 rounded-full border-4 flex items-center justify-center font-bold shadow-lg transition-all
+                                            relative w-12 h-12 md:w-16 md:h-16 rounded-full border-4 flex items-center justify-center font-bold shadow-lg transition-all
                                             ${selectedChip === val ? 'scale-110 -translate-y-2 ring-4 ring-yellow-400 z-10 shadow-yellow-500/50' : 'hover:scale-105 opacity-90 hover:opacity-100'}
                                             ${val === 2 ? 'bg-blue-600 border-blue-300' : ''}
                                             ${val === 5 ? 'bg-red-600 border-red-300' : ''}
@@ -609,7 +806,7 @@
                                             ${val === 100 ? 'bg-gray-900 border-yellow-500 text-yellow-500' : ''}
                                         `}
                                     >
-                                        <span className="drop-shadow-md">{val}</span>
+                                        <span className="drop-shadow-md text-sm md:text-lg">{val}</span>
                                     </button>
                                 ))}
                             </div>
@@ -618,7 +815,7 @@
                             <div className="flex items-center gap-4 w-full md:w-auto justify-center">
                                 <div className="flex flex-col w-full md:w-auto gap-1">
                                     <div className="text-xs text-gray-400 text-center">Time Left</div>
-                                    <div className="h-4 bg-gray-700 rounded-full w-32 md:w-48 overflow-hidden border border-gray-600 relative">
+                                    <div className="h-4 bg-gray-700 rounded-full w-24 md:w-40 overflow-hidden border border-gray-600 relative">
                                         <div
                                             className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000 ease-linear"
                                             style={{ width: `${(timer / BET_TIME) * 100}%` }}
@@ -626,18 +823,33 @@
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={handleConfirm}
-                                    disabled={gameState !== PHASES.BETTING}
-                                    className={`
-                                        px-8 py-3 rounded-xl font-bold text-lg shadow-lg transition-all whitespace-nowrap border-b-4 active:border-b-0 active:translate-y-1
-                                        ${gameState === PHASES.BETTING
-                                            ? 'bg-yellow-500 hover:bg-yellow-400 text-black border-yellow-700'
-                                            : 'bg-gray-700 text-gray-500 cursor-not-allowed border-gray-800'}
-                                    `}
-                                >
-                                    確定開牌
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleCancel}
+                                        disabled={gameState !== PHASES.BETTING || (currentBets.big === 0 && currentBets.small === 0)}
+                                        className={`
+                                            px-4 py-3 rounded-xl font-bold text-base md:text-lg shadow-lg transition-all whitespace-nowrap border-b-4 active:border-b-0 active:translate-y-1
+                                            ${gameState === PHASES.BETTING && (currentBets.big > 0 || currentBets.small > 0)
+                                                ? 'bg-red-600 hover:bg-red-500 text-white border-red-800'
+                                                : 'bg-gray-700 text-gray-500 cursor-not-allowed border-gray-800'}
+                                        `}
+                                    >
+                                        取消 (Clear)
+                                    </button>
+
+                                    <button
+                                        onClick={handleConfirm}
+                                        disabled={gameState !== PHASES.BETTING}
+                                        className={`
+                                            px-6 py-3 rounded-xl font-bold text-base md:text-lg shadow-lg transition-all whitespace-nowrap border-b-4 active:border-b-0 active:translate-y-1
+                                            ${gameState === PHASES.BETTING
+                                                ? 'bg-yellow-500 hover:bg-yellow-400 text-black border-yellow-700'
+                                                : 'bg-gray-700 text-gray-500 cursor-not-allowed border-gray-800'}
+                                        `}
+                                    >
+                                        確定 (Confirm)
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </footer>
